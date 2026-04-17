@@ -77,7 +77,7 @@ fn calculate_performance(
     passed_objects: Option<u32>,
 ) -> CalculatePerformanceResult {
     // osu!std rx
-    
+
     if mode == 0 && mods & 128 > 0 {
         let mut calculator = OsuPP::from_map(&beatmap);
         calculator = calculator.mods(mods).combo(max_combo).misses(miss_count);
@@ -161,9 +161,9 @@ pub unsafe extern "C" fn calculate_performance_from_path(
     )
 }
 
-static mut cached_beatmap: Option<Beatmap> = None;
-static mut cached_beatmap_len: usize = 0;
-
+// This is bad. I know.
+static mut CACHED_BEATMAP: Option<Beatmap> = None;
+static mut CACHED_BEATMAP_LEN: usize = 0;
 
 #[ffi_function]
 #[no_mangle]
@@ -183,14 +183,13 @@ pub unsafe extern "C" fn calculate_performance_from_bytes(
 
     // FUCK that this is unsafe!
     // we need PURE PERFORMANCE!
-    if cached_beatmap_len == beatmap_bytes.len() && cached_beatmap.is_some() {
-        beatmap = cached_beatmap.clone().unwrap();
+    if CACHED_BEATMAP_LEN == beatmap_bytes.len() && CACHED_BEATMAP.is_some() {
+        beatmap = CACHED_BEATMAP.clone().unwrap();
     } else {
         beatmap = Beatmap::from_bytes(beatmap_bytes.as_slice()).unwrap();
-        cached_beatmap = Some(beatmap.clone());
-        cached_beatmap_len = beatmap_bytes.len();
+        CACHED_BEATMAP = Some(beatmap.clone());
+        CACHED_BEATMAP_LEN = beatmap_bytes.len();
     }
-
 
     calculate_performance(
         beatmap,
