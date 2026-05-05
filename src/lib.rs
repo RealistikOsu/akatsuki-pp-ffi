@@ -68,19 +68,28 @@ fn calculate_performance(
     beatmap: Beatmap,
     mode: u32,
     mods: u32,
-    max_combo: u32,
+    max_combo: Option<u32>,
     accuracy: Option<f64>,
     count_300: Option<u32>,
     count_100: Option<u32>,
     count_50: Option<u32>,
     miss_count: u32,
     passed_objects: Option<u32>,
+    rate: Option<f64>,
 ) -> CalculatePerformanceResult {
     // osu!std rx
 
     if mode == 0 && mods & 128 > 0 {
         let mut calculator = OsuPP::from_map(&beatmap);
-        calculator = calculator.mods(mods).combo(max_combo).misses(miss_count);
+        calculator = calculator.mods(mods).misses(miss_count);
+
+        if let Some(max_combo) = max_combo {
+            calculator = calculator.combo(max_combo);
+        }
+
+        if let Some(rate) = rate {
+            calculator = calculator.clock_rate(rate);
+        }
 
         if let Some(passed_objects) = passed_objects {
             calculator = calculator.passed_objects(passed_objects);
@@ -110,8 +119,15 @@ fn calculate_performance(
             .unwrap()
             .mods(mods)
             .lazer(false)
-            .combo(max_combo)
             .misses(miss_count);
+
+        if let Some(max_combo) = max_combo {
+            calculator = calculator.combo(max_combo);
+        }
+
+        if let Some(rate) = rate {
+            calculator = calculator.clock_rate(rate);
+        }
 
         if let Some(passed_objects) = passed_objects {
             calculator = calculator.passed_objects(passed_objects);
@@ -151,19 +167,16 @@ pub unsafe extern "C" fn calculate_performance_from_path(
         beatmap,
         mode,
         mods,
-        max_combo,
+        Some(max_combo),
         accuracy.into_option(),
         count_300.into_option(),
         count_100.into_option(),
         count_50.into_option(),
         miss_count,
         passed_objects.into_option(),
+        None,
     )
 }
-
-// This is bad. I know.
-static mut CACHED_BEATMAP: Option<Beatmap> = None;
-static mut CACHED_BEATMAP_LEN: usize = 0;
 
 #[ffi_function]
 #[no_mangle]
@@ -178,6 +191,42 @@ pub unsafe extern "C" fn calculate_performance_from_bytes(
     count_50: FFIOption<u32>,
     miss_count: u32,
     passed_objects: FFIOption<u32>,
+) -> CalculatePerformanceResult {
+    let beatmap = Beatmap::from_bytes(beatmap_bytes.as_slice()).unwrap();
+
+    calculate_performance(
+        beatmap,
+        mode,
+        mods,
+        Some(max_combo),
+        accuracy.into_option(),
+        count_300.into_option(),
+        count_100.into_option(),
+        count_50.into_option(),
+        miss_count,
+        passed_objects.into_option(),
+        None,
+    )
+}
+
+// This is bad. I know.
+static mut CACHED_BEATMAP: Option<Beatmap> = None;
+static mut CACHED_BEATMAP_LEN: usize = 0;
+
+#[ffi_function]
+#[no_mangle]
+pub unsafe extern "C" fn calculate_performance_from_bytes_rate(
+    beatmap_bytes: FFISlice<u8>,
+    mode: u32,
+    mods: u32,
+    max_combo: FFIOption<u32>,
+    accuracy: FFIOption<f64>,
+    count_300: FFIOption<u32>,
+    count_100: FFIOption<u32>,
+    count_50: FFIOption<u32>,
+    miss_count: u32,
+    passed_objects: FFIOption<u32>,
+    rate: FFIOption<f64>,
 ) -> CalculatePerformanceResult {
     let beatmap: Beatmap;
 
@@ -195,13 +244,14 @@ pub unsafe extern "C" fn calculate_performance_from_bytes(
         beatmap,
         mode,
         mods,
-        max_combo,
+        max_combo.into_option(),
         accuracy.into_option(),
         count_300.into_option(),
         count_100.into_option(),
         count_50.into_option(),
         miss_count,
         passed_objects.into_option(),
+        rate.into_option(),
     )
 }
 
@@ -210,6 +260,7 @@ pub fn my_inventory() -> Inventory {
         .register(extra_type!(CalculatePerformanceResult))
         .register(function!(calculate_performance_from_path))
         .register(function!(calculate_performance_from_bytes))
+        .register(function!(calculate_performance_from_bytes_rate))
         .inventory()
 }
 
