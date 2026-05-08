@@ -180,6 +180,38 @@ pub unsafe extern "C" fn calculate_performance_from_path(
 
 #[ffi_function]
 #[no_mangle]
+pub unsafe extern "C" fn calculate_performance_from_path_rate(
+    beatmap_path: *const c_char,
+    mode: u32,
+    mods: u32,
+    max_combo: u32,
+    accuracy: FFIOption<f64>,
+    count_300: FFIOption<u32>,
+    count_100: FFIOption<u32>,
+    count_50: FFIOption<u32>,
+    miss_count: u32,
+    passed_objects: FFIOption<u32>,
+    rate: FFIOption<f64>,
+) -> CalculatePerformanceResult {
+    let beatmap = Beatmap::from_path(CStr::from_ptr(beatmap_path).to_str().unwrap()).unwrap();
+
+    calculate_performance(
+        beatmap,
+        mode,
+        mods,
+        Some(max_combo),
+        accuracy.into_option(),
+        count_300.into_option(),
+        count_100.into_option(),
+        count_50.into_option(),
+        miss_count,
+        passed_objects.into_option(),
+        rate.into_option(),
+    )
+}
+
+#[ffi_function]
+#[no_mangle]
 pub unsafe extern "C" fn calculate_performance_from_bytes(
     beatmap_bytes: FFISlice<u8>,
     mode: u32,
