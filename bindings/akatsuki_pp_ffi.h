@@ -13,6 +13,8 @@ extern "C" {
 
 
 
+typedef struct beatmaphandle beatmaphandle;
+
 typedef struct calculateperformanceresult
     {
     double pp;
@@ -53,6 +55,12 @@ typedef struct sliceu8
 calculateperformanceresult calculate_performance_from_path(const int8_t* beatmap_path, uint32_t mode, uint32_t mods, uint32_t max_combo, optionf64 accuracy, optionu32 count_300, optionu32 count_100, optionu32 count_50, uint32_t miss_count, optionu32 passed_objects);
 
 calculateperformanceresult calculate_performance_from_bytes(sliceu8 beatmap_bytes, uint32_t mode, uint32_t mods, uint32_t max_combo, optionf64 accuracy, optionu32 count_300, optionu32 count_100, optionu32 count_50, uint32_t miss_count, optionu32 passed_objects);
+
+beatmaphandle* beatmap_new(sliceu8 beatmap_bytes);
+
+void beatmap_free(beatmaphandle* beatmap);
+
+calculateperformanceresult calculate_performance_from_ptr(const beatmaphandle* beatmap, uint32_t mode, const int8_t* mods_json, optionu32 max_combo, optionf64 accuracy, optionu32 count_300, optionu32 count_100, optionu32 count_50, uint32_t miss_count, optionu32 passed_objects, optionf64 rate);
 
 
 #ifdef __cplusplus

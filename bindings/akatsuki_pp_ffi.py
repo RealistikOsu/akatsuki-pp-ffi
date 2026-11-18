@@ -12,9 +12,14 @@ def init_lib(path):
 
     c_lib.calculate_performance_from_path.argtypes = [ctypes.POINTER(ctypes.c_int8), ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, Optionf64, Optionu32, Optionu32, Optionu32, ctypes.c_uint32, Optionu32]
     c_lib.calculate_performance_from_bytes.argtypes = [Sliceu8, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, Optionf64, Optionu32, Optionu32, Optionu32, ctypes.c_uint32, Optionu32]
+    c_lib.beatmap_new.argtypes = [Sliceu8]
+    c_lib.beatmap_free.argtypes = [ctypes.c_void_p]
+    c_lib.calculate_performance_from_ptr.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.POINTER(ctypes.c_int8), Optionu32, Optionf64, Optionu32, Optionu32, Optionu32, ctypes.c_uint32, Optionu32, Optionf64]
 
     c_lib.calculate_performance_from_path.restype = CalculatePerformanceResult
     c_lib.calculate_performance_from_bytes.restype = CalculatePerformanceResult
+    c_lib.beatmap_new.restype = ctypes.c_void_p
+    c_lib.calculate_performance_from_ptr.restype = CalculatePerformanceResult
 
 
 
@@ -26,6 +31,18 @@ def calculate_performance_from_bytes(beatmap_bytes: Sliceu8 | ctypes.Array[ctype
         beatmap_bytes = Sliceu8(data=ctypes.cast(beatmap_bytes, ctypes.POINTER(ctypes.c_uint8)), len=len(beatmap_bytes))
 
     return c_lib.calculate_performance_from_bytes(beatmap_bytes, mode, mods, max_combo, accuracy, count_300, count_100, count_50, miss_count, passed_objects)
+
+def beatmap_new(beatmap_bytes: Sliceu8 | ctypes.Array[ctypes.c_uint8]) -> ctypes.c_void_p:
+    if hasattr(beatmap_bytes, "_length_") and getattr(beatmap_bytes, "_type_", "") == ctypes.c_uint8:
+        beatmap_bytes = Sliceu8(data=ctypes.cast(beatmap_bytes, ctypes.POINTER(ctypes.c_uint8)), len=len(beatmap_bytes))
+
+    return c_lib.beatmap_new(beatmap_bytes)
+
+def beatmap_free(beatmap: ctypes.c_void_p):
+    return c_lib.beatmap_free(beatmap)
+
+def calculate_performance_from_ptr(beatmap: ctypes.c_void_p, mode: int, mods_json: ctypes.POINTER(ctypes.c_int8), max_combo: Optionu32, accuracy: Optionf64, count_300: Optionu32, count_100: Optionu32, count_50: Optionu32, miss_count: int, passed_objects: Optionu32, rate: Optionf64) -> CalculatePerformanceResult:
+    return c_lib.calculate_performance_from_ptr(beatmap, mode, mods_json, max_combo, accuracy, count_300, count_100, count_50, miss_count, passed_objects, rate)
 
 
 

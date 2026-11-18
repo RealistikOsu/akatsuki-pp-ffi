@@ -25,6 +25,15 @@ namespace My.Company
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl, EntryPoint = "calculate_performance_from_bytes")]
         public static extern CalculatePerformanceResult calculate_performance_from_bytes(Sliceu8 beatmap_bytes, uint mode, uint mods, uint max_combo, Optionf64 accuracy, Optionu32 count_300, Optionu32 count_100, Optionu32 count_50, uint miss_count, Optionu32 passed_objects);
 
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl, EntryPoint = "beatmap_new")]
+        public static extern IntPtr beatmap_new(Sliceu8 beatmap_bytes);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl, EntryPoint = "beatmap_free")]
+        public static extern void beatmap_free(IntPtr beatmap);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl, EntryPoint = "calculate_performance_from_ptr")]
+        public static extern CalculatePerformanceResult calculate_performance_from_ptr(IntPtr beatmap, uint mode, ref sbyte mods_json, Optionu32 max_combo, Optionf64 accuracy, Optionu32 count_300, Optionu32 count_100, Optionu32 count_50, uint miss_count, Optionu32 passed_objects, Optionf64 rate);
+
     }
 
     [Serializable]

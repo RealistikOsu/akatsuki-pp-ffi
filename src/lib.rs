@@ -2,13 +2,15 @@ use akatsuki_pp_rs::{
     any::PerformanceAttributes,
     model::mode::GameMode,
     osu_2019::{stars::OsuPerformanceAttributes, OsuPP},
-    Beatmap,
+    Beatmap, GameMods,
 };
 use interoptopus::{
     extra_type, ffi_function, ffi_type, function,
     patterns::{option::FFIOption, slice::FFISlice},
     Inventory, InventoryBuilder,
 };
+use rosu_mods::{serde::GameModsSeed, GameMode as ModsGameMode, GameModIntermode};
+use serde::de::DeserializeSeed;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 
@@ -65,9 +67,10 @@ impl CalculatePerformanceResult {
 }
 
 fn calculate_performance(
-    beatmap: Beatmap,
+    beatmap: &Beatmap,
     mode: u32,
-    mods: u32,
+    mods: impl Into<GameMods>,
+    relax: bool,
     max_combo: Option<u32>,
     accuracy: Option<f64>,
     count_300: Option<u32>,
@@ -79,8 +82,8 @@ fn calculate_performance(
 ) -> CalculatePerformanceResult {
     // osu!std rx
 
-    if mode == 0 && mods & 128 > 0 {
-        let mut calculator = OsuPP::from_map(&beatmap);
+    if mode == 0 && relax {
+        let mut calculator = OsuPP::from_map(beatmap);
         calculator = calculator.mods(mods).misses(miss_count);
 
         if let Some(max_combo) = max_combo {
@@ -164,9 +167,10 @@ pub unsafe extern "C" fn calculate_performance_from_path(
     let beatmap = Beatmap::from_path(CStr::from_ptr(beatmap_path).to_str().unwrap()).unwrap();
 
     calculate_performance(
-        beatmap,
+        &beatmap,
         mode,
         mods,
+        mods & 128 > 0,
         Some(max_combo),
         accuracy.into_option(),
         count_300.into_option(),
@@ -196,9 +200,10 @@ pub unsafe extern "C" fn calculate_performance_from_path_rate(
     let beatmap = Beatmap::from_path(CStr::from_ptr(beatmap_path).to_str().unwrap()).unwrap();
 
     calculate_performance(
-        beatmap,
+        &beatmap,
         mode,
         mods,
+        mods & 128 > 0,
         Some(max_combo),
         accuracy.into_option(),
         count_300.into_option(),
@@ -227,9 +232,10 @@ pub unsafe extern "C" fn calculate_performance_from_bytes(
     let beatmap = Beatmap::from_bytes(beatmap_bytes.as_slice()).unwrap();
 
     calculate_performance(
-        beatmap,
+        &beatmap,
         mode,
         mods,
+        mods & 128 > 0,
         Some(max_combo),
         accuracy.into_option(),
         count_300.into_option(),
@@ -241,16 +247,35 @@ pub unsafe extern "C" fn calculate_performance_from_bytes(
     )
 }
 
-// This is bad. I know.
-static mut CACHED_BEATMAP: Option<Beatmap> = None;
-static mut CACHED_BEATMAP_LEN: usize = 0;
+#[ffi_type(opaque)]
+#[repr(C)]
+pub struct BeatmapHandle {
+    inner: Beatmap,
+}
 
 #[ffi_function]
 #[no_mangle]
-pub unsafe extern "C" fn calculate_performance_from_bytes_rate(
-    beatmap_bytes: FFISlice<u8>,
+pub unsafe extern "C" fn beatmap_new(beatmap_bytes: FFISlice<u8>) -> *mut BeatmapHandle {
+    match Beatmap::from_bytes(beatmap_bytes.as_slice()) {
+        Ok(inner) => Box::into_raw(Box::new(BeatmapHandle { inner })),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+#[ffi_function]
+#[no_mangle]
+pub unsafe extern "C" fn beatmap_free(beatmap: *mut BeatmapHandle) {
+    if !beatmap.is_null() {
+        drop(Box::from_raw(beatmap));
+    }
+}
+
+#[ffi_function]
+#[no_mangle]
+pub unsafe extern "C" fn calculate_performance_from_ptr(
+    beatmap: *const BeatmapHandle,
     mode: u32,
-    mods: u32,
+    mods_json: *const c_char,
     max_combo: FFIOption<u32>,
     accuracy: FFIOption<f64>,
     count_300: FFIOption<u32>,
@@ -260,22 +285,28 @@ pub unsafe extern "C" fn calculate_performance_from_bytes_rate(
     passed_objects: FFIOption<u32>,
     rate: FFIOption<f64>,
 ) -> CalculatePerformanceResult {
-    let beatmap: Beatmap;
-
-    // FUCK that this is unsafe!
-    // we need PURE PERFORMANCE!
-    if CACHED_BEATMAP_LEN == beatmap_bytes.len() && CACHED_BEATMAP.is_some() {
-        beatmap = CACHED_BEATMAP.clone().unwrap();
-    } else {
-        beatmap = Beatmap::from_bytes(beatmap_bytes.as_slice()).unwrap();
-        CACHED_BEATMAP = Some(beatmap.clone());
-        CACHED_BEATMAP_LEN = beatmap_bytes.len();
-    }
+    let seed = GameModsSeed::Mode {
+        mode: match mode {
+            0 => ModsGameMode::Osu,
+            1 => ModsGameMode::Taiko,
+            2 => ModsGameMode::Catch,
+            3 => ModsGameMode::Mania,
+            _ => panic!("Invalid mode"),
+        },
+        deny_unknown_fields: false,
+    };
+    let mods = seed
+        .deserialize(&mut serde_json::Deserializer::from_str(
+            CStr::from_ptr(mods_json).to_str().unwrap(),
+        ))
+        .unwrap();
+    let relax = mods.contains_intermode(GameModIntermode::Relax);
 
     calculate_performance(
-        beatmap,
+        &(*beatmap).inner,
         mode,
         mods,
+        relax,
         max_combo.into_option(),
         accuracy.into_option(),
         count_300.into_option(),
@@ -292,7 +323,9 @@ pub fn my_inventory() -> Inventory {
         .register(extra_type!(CalculatePerformanceResult))
         .register(function!(calculate_performance_from_path))
         .register(function!(calculate_performance_from_bytes))
-        .register(function!(calculate_performance_from_bytes_rate))
+        .register(function!(beatmap_new))
+        .register(function!(beatmap_free))
+        .register(function!(calculate_performance_from_ptr))
         .inventory()
 }
 
