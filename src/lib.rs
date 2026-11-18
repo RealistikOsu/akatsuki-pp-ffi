@@ -283,7 +283,6 @@ pub unsafe extern "C" fn calculate_performance_from_ptr(
     count_50: FFIOption<u32>,
     miss_count: u32,
     passed_objects: FFIOption<u32>,
-    rate: FFIOption<f64>,
 ) -> CalculatePerformanceResult {
     let seed = GameModsSeed::Mode {
         mode: match mode {
@@ -314,7 +313,7 @@ pub unsafe extern "C" fn calculate_performance_from_ptr(
         count_50.into_option(),
         miss_count,
         passed_objects.into_option(),
-        rate.into_option(),
+        None,
     )
 }
 
