@@ -15,11 +15,15 @@ def init_lib(path):
     c_lib.beatmap_new.argtypes = [Sliceu8]
     c_lib.beatmap_free.argtypes = [ctypes.c_void_p]
     c_lib.calculate_performance_from_ptr.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.POINTER(ctypes.c_int8), Optionu32, Optionf64, Optionu32, Optionu32, Optionu32, ctypes.c_uint32, Optionu32]
+    c_lib.calculate_performance_from_path_json.argtypes = [ctypes.POINTER(ctypes.c_int8), ctypes.c_uint32, ctypes.POINTER(ctypes.c_int8), Optionu32, Optionf64, Optionu32, Optionu32, Optionu32, ctypes.c_uint32, Optionu32]
+    c_lib.calculate_performance_from_bytes_json.argtypes = [Sliceu8, ctypes.c_uint32, ctypes.POINTER(ctypes.c_int8), Optionu32, Optionf64, Optionu32, Optionu32, Optionu32, ctypes.c_uint32, Optionu32]
 
     c_lib.calculate_performance_from_path.restype = CalculatePerformanceResult
     c_lib.calculate_performance_from_bytes.restype = CalculatePerformanceResult
     c_lib.beatmap_new.restype = ctypes.c_void_p
     c_lib.calculate_performance_from_ptr.restype = CalculatePerformanceResult
+    c_lib.calculate_performance_from_path_json.restype = CalculatePerformanceResult
+    c_lib.calculate_performance_from_bytes_json.restype = CalculatePerformanceResult
 
 
 
@@ -43,6 +47,15 @@ def beatmap_free(beatmap: ctypes.c_void_p):
 
 def calculate_performance_from_ptr(beatmap: ctypes.c_void_p, mode: int, mods_json: ctypes.POINTER(ctypes.c_int8), max_combo: Optionu32, accuracy: Optionf64, count_300: Optionu32, count_100: Optionu32, count_50: Optionu32, miss_count: int, passed_objects: Optionu32) -> CalculatePerformanceResult:
     return c_lib.calculate_performance_from_ptr(beatmap, mode, mods_json, max_combo, accuracy, count_300, count_100, count_50, miss_count, passed_objects)
+
+def calculate_performance_from_path_json(beatmap_path: ctypes.POINTER(ctypes.c_int8), mode: int, mods_json: ctypes.POINTER(ctypes.c_int8), max_combo: Optionu32, accuracy: Optionf64, count_300: Optionu32, count_100: Optionu32, count_50: Optionu32, miss_count: int, passed_objects: Optionu32) -> CalculatePerformanceResult:
+    return c_lib.calculate_performance_from_path_json(beatmap_path, mode, mods_json, max_combo, accuracy, count_300, count_100, count_50, miss_count, passed_objects)
+
+def calculate_performance_from_bytes_json(beatmap_bytes: Sliceu8 | ctypes.Array[ctypes.c_uint8], mode: int, mods_json: ctypes.POINTER(ctypes.c_int8), max_combo: Optionu32, accuracy: Optionf64, count_300: Optionu32, count_100: Optionu32, count_50: Optionu32, miss_count: int, passed_objects: Optionu32) -> CalculatePerformanceResult:
+    if hasattr(beatmap_bytes, "_length_") and getattr(beatmap_bytes, "_type_", "") == ctypes.c_uint8:
+        beatmap_bytes = Sliceu8(data=ctypes.cast(beatmap_bytes, ctypes.POINTER(ctypes.c_uint8)), len=len(beatmap_bytes))
+
+    return c_lib.calculate_performance_from_bytes_json(beatmap_bytes, mode, mods_json, max_combo, accuracy, count_300, count_100, count_50, miss_count, passed_objects)
 
 
 

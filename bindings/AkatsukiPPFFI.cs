@@ -34,6 +34,12 @@ namespace My.Company
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl, EntryPoint = "calculate_performance_from_ptr")]
         public static extern CalculatePerformanceResult calculate_performance_from_ptr(IntPtr beatmap, uint mode, ref sbyte mods_json, Optionu32 max_combo, Optionf64 accuracy, Optionu32 count_300, Optionu32 count_100, Optionu32 count_50, uint miss_count, Optionu32 passed_objects);
 
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl, EntryPoint = "calculate_performance_from_path_json")]
+        public static extern CalculatePerformanceResult calculate_performance_from_path_json(ref sbyte beatmap_path, uint mode, ref sbyte mods_json, Optionu32 max_combo, Optionf64 accuracy, Optionu32 count_300, Optionu32 count_100, Optionu32 count_50, uint miss_count, Optionu32 passed_objects);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl, EntryPoint = "calculate_performance_from_bytes_json")]
+        public static extern CalculatePerformanceResult calculate_performance_from_bytes_json(Sliceu8 beatmap_bytes, uint mode, ref sbyte mods_json, Optionu32 max_combo, Optionf64 accuracy, Optionu32 count_300, Optionu32 count_100, Optionu32 count_50, uint miss_count, Optionu32 passed_objects);
+
     }
 
     [Serializable]

@@ -270,10 +270,8 @@ pub unsafe extern "C" fn beatmap_free(beatmap: *mut BeatmapHandle) {
     }
 }
 
-#[ffi_function]
-#[no_mangle]
-pub unsafe extern "C" fn calculate_performance_from_ptr(
-    beatmap: *const BeatmapHandle,
+unsafe fn calculate_performance_json(
+    beatmap: &Beatmap,
     mode: u32,
     mods_json: *const c_char,
     max_combo: FFIOption<u32>,
@@ -302,7 +300,7 @@ pub unsafe extern "C" fn calculate_performance_from_ptr(
     let relax = mods.contains_intermode(GameModIntermode::Relax);
 
     calculate_performance(
-        &(*beatmap).inner,
+        beatmap,
         mode,
         mods,
         relax,
@@ -317,6 +315,94 @@ pub unsafe extern "C" fn calculate_performance_from_ptr(
     )
 }
 
+#[ffi_function]
+#[no_mangle]
+pub unsafe extern "C" fn calculate_performance_from_ptr(
+    beatmap: *const BeatmapHandle,
+    mode: u32,
+    mods_json: *const c_char,
+    max_combo: FFIOption<u32>,
+    accuracy: FFIOption<f64>,
+    count_300: FFIOption<u32>,
+    count_100: FFIOption<u32>,
+    count_50: FFIOption<u32>,
+    miss_count: u32,
+    passed_objects: FFIOption<u32>,
+) -> CalculatePerformanceResult {
+    calculate_performance_json(
+        &(*beatmap).inner,
+        mode,
+        mods_json,
+        max_combo,
+        accuracy,
+        count_300,
+        count_100,
+        count_50,
+        miss_count,
+        passed_objects,
+    )
+}
+
+#[ffi_function]
+#[no_mangle]
+pub unsafe extern "C" fn calculate_performance_from_path_json(
+    beatmap_path: *const c_char,
+    mode: u32,
+    mods_json: *const c_char,
+    max_combo: FFIOption<u32>,
+    accuracy: FFIOption<f64>,
+    count_300: FFIOption<u32>,
+    count_100: FFIOption<u32>,
+    count_50: FFIOption<u32>,
+    miss_count: u32,
+    passed_objects: FFIOption<u32>,
+) -> CalculatePerformanceResult {
+    let beatmap = Beatmap::from_path(CStr::from_ptr(beatmap_path).to_str().unwrap()).unwrap();
+
+    calculate_performance_json(
+        &beatmap,
+        mode,
+        mods_json,
+        max_combo,
+        accuracy,
+        count_300,
+        count_100,
+        count_50,
+        miss_count,
+        passed_objects,
+    )
+}
+
+#[ffi_function]
+#[no_mangle]
+pub unsafe extern "C" fn calculate_performance_from_bytes_json(
+    beatmap_bytes: FFISlice<u8>,
+    mode: u32,
+    mods_json: *const c_char,
+    max_combo: FFIOption<u32>,
+    accuracy: FFIOption<f64>,
+    count_300: FFIOption<u32>,
+    count_100: FFIOption<u32>,
+    count_50: FFIOption<u32>,
+    miss_count: u32,
+    passed_objects: FFIOption<u32>,
+) -> CalculatePerformanceResult {
+    let beatmap = Beatmap::from_bytes(beatmap_bytes.as_slice()).unwrap();
+
+    calculate_performance_json(
+        &beatmap,
+        mode,
+        mods_json,
+        max_combo,
+        accuracy,
+        count_300,
+        count_100,
+        count_50,
+        miss_count,
+        passed_objects,
+    )
+}
+
 pub fn my_inventory() -> Inventory {
     InventoryBuilder::new()
         .register(extra_type!(CalculatePerformanceResult))
@@ -325,6 +411,8 @@ pub fn my_inventory() -> Inventory {
         .register(function!(beatmap_new))
         .register(function!(beatmap_free))
         .register(function!(calculate_performance_from_ptr))
+        .register(function!(calculate_performance_from_path_json))
+        .register(function!(calculate_performance_from_bytes_json))
         .inventory()
 }
 
